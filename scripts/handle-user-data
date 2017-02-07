@@ -26,8 +26,8 @@ mount_data_partition() {
         mkdir -p /var/lib
     fi
 
-    mkdir -p /mnt/$PARTNAME/var/lib/docker
-    ln -s /mnt/$PARTNAME/var/lib/docker /var/lib/docker
+#    mkdir -p /mnt/$PARTNAME/var/lib/docker
+#    ln -s /mnt/$PARTNAME/var/lib/docker /var/lib/docker
 
     mkdir -p /mnt/$PARTNAME/var/lib/boot2docker
     ln -s /mnt/$PARTNAME/var/lib/boot2docker /var/lib/boot2docker
@@ -74,8 +74,8 @@ prepare_data_partion() {
     # Activate the swap partition
     mkswap "${UNPARTITIONED_HD}2"
 
-    # Add the data partition
-    (echo n; echo p; echo 1; echo ; echo ; echo w) | fdisk $UNPARTITIONED_HD
+    # Add the lvm partition
+    (echo n; echo p; echo 1; echo ; echo ; echo t; echo 1; echo 8e; echo w) | fdisk $UNPARTITIONED_HD
     # Let kernel re-read partition table
     partprobe
     # wait for the partition to actually exist, timeout after about 5 seconds
@@ -84,10 +84,14 @@ prepare_data_partion() {
     	timer=$((timer + 1))
         sleep 0.5
     done
-
-    BOOT2DOCKER_DATA=`echo "${UNPARTITIONED_HD}1"`
-    mkfs.ext4 -i 8192 -L $LABEL $BOOT2DOCKER_DATA
+    
+    BOOT2DOCKER_LVM=`echo "${UNPARTITIONED_HD}1"`
+    vgcreate -y mini_vg $BOOT2DOCKER_LVM
+    lvcreate -L 4G -ndata mini_vg
+    mkfs.ext4 -L $LABEL /dev/mini_vg/data
     swapon "${UNPARTITIONED_HD}2"
+    echo "VG=mini_vg" >> /etc/sysconfig/docker-storage-setup
+    docker-storage-setup
 }
 
 # Function to extract userdata.tar containing the ssh keys into the home directory /home/docker
