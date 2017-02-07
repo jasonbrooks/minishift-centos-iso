@@ -14,7 +14,10 @@ auth --useshadow --passalgo=sha512
 timezone --utc America/New_York
 bootloader --location=mbr --append="no_timer_check console=ttyS0 console=tty0 net.ifnames=0 biosdevname=0"
 clearpart --all
-part / --fstype="ext4" --size=10240
+part /boot --size=300 --fstype="xfs"
+part pv.01 --grow
+volgroup minishift pv.01
+logvol / --size=3000 --fstype="xfs" --name=root --vgname=minishift
 
 #Repos
 repo --name=base --baseurl=http://mirror.centos.org/centos/7/os/x86_64/
